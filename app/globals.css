@@ -1,13 +1,16 @@
 @import "tailwindcss";
 
 :root {
-  --background: #fafafa;
-  --foreground: #171717;
-  --muted: #6b7280;
+  --background: #f6f5f2;
+  --foreground: #1c1917;
+  --muted: #78716c;
   --surface: #ffffff;
-  --border: #e5e7eb;
-  --accent: #2563eb;
+  --border: #e7e5e0;
+  --accent: #4f46e5;
+  --accent-soft: #eef2ff;
+  --on-accent: #ffffff;
   --danger: #dc2626;
+  --danger-soft: #fef2f2;
 }
 
 @theme inline {
@@ -17,18 +20,24 @@
   --color-surface: var(--surface);
   --color-border: var(--border);
   --color-accent: var(--accent);
+  --color-accent-soft: var(--accent-soft);
+  --color-on-accent: var(--on-accent);
   --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-    --muted: #9ca3af;
-    --surface: #171717;
-    --border: #2e2e2e;
-    --accent: #60a5fa;
+    --background: #0f0f12;
+    --foreground: #ececef;
+    --muted: #a1a1aa;
+    --surface: #18181c;
+    --border: #2a2a31;
+    --accent: #818cf8;
+    --accent-soft: #1e1b4b;
+    --on-accent: #0f0f12;
     --danger: #f87171;
+    --danger-soft: #2a1215;
   }
 }
 
@@ -41,4 +50,5 @@ body {
     "Apple SD Gothic Neo",
     "Malgun Gothic",
     sans-serif;
+  word-break: keep-all;
 }
