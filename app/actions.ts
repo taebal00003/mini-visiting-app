@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { getGuestbook } from "@/lib/app-guestbook";
-import type { FieldErrors } from "@/lib/guestbook";
+import type { ChangeResult, FieldErrors } from "@/lib/guestbook";
 
 export type WriteFormState = {
   status: "idle" | "success" | "error";
@@ -40,4 +40,53 @@ export async function writeEntryAction(_prev: WriteFormState, formData: FormData
 
   revalidatePath("/");
   return { status: "success", submittedAt: Date.now() };
+}
+
+export type ChangeFormState = {
+  status: "idle" | "success" | "error" | "gone";
+  notice?: string;
+  fieldErrors?: FieldErrors;
+  /** The Message the writer typed, kept when the change is refused. */
+  values?: { message: string };
+};
+
+const NOTICES = {
+  "wrong-password": "비밀번호가 일치하지 않습니다.",
+  "not-found": "이미 삭제된 글입니다.",
+} as const;
+
+/** Turns a refused or failed change into what the form shows. */
+function refusal(result: ChangeResult, values?: ChangeFormState["values"]): ChangeFormState {
+  if (result.ok) throw new Error("not a refusal");
+  switch (result.reason) {
+    case "invalid":
+      return { status: "error", fieldErrors: result.fieldErrors, values };
+    case "wrong-password":
+      return { status: "error", notice: NOTICES["wrong-password"], values };
+    case "not-found":
+      // Someone else removed it: refresh the list so it disappears here too.
+      revalidatePath("/");
+      return { status: "gone", notice: NOTICES["not-found"] };
+  }
+}
+
+export async function editMessageAction(
+  id: string,
+  _prev: ChangeFormState,
+  formData: FormData,
+): Promise<ChangeFormState> {
+  const input = { id, message: text(formData, "message"), password: text(formData, "password") };
+  const values = { message: input.message };
+
+  let result: ChangeResult;
+  try {
+    result = await getGuestbook().editMessage(input);
+  } catch (error) {
+    console.error("editMessage failed", error);
+    return { status: "error", notice: UNEXPECTED, values };
+  }
+  if (!result.ok) return refusal(result, values);
+
+  revalidatePath("/");
+  return { status: "success" };
 }

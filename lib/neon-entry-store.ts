@@ -10,6 +10,10 @@ type EntryRow = {
   updated_at: string | Date | null;
 };
 
+// Ids are uuids; anything else cannot name an Entry and would make Postgres throw.
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const isUuid = (id: string) => UUID.test(id);
+
 function toStoredEntry(row: EntryRow): StoredEntry {
   return {
     id: row.id,
@@ -40,6 +44,26 @@ export function createNeonEntryStore(databaseUrl: string): EntryStore {
         INSERT INTO entries (author_name, message, password_hash)
         VALUES (${authorName}, ${message}, ${passwordHash})
       `;
+    },
+
+    async find(id) {
+      if (!isUuid(id)) return null;
+      const rows = (await sql`
+        SELECT id, author_name, message, password_hash, created_at, updated_at
+        FROM entries
+        WHERE id = ${id}
+      `) as EntryRow[];
+      return rows.length > 0 ? toStoredEntry(rows[0]) : null;
+    },
+
+    async updateMessage(id, message) {
+      if (!isUuid(id)) return false;
+      const rows = await sql`
+        UPDATE entries SET message = ${message}, updated_at = now()
+        WHERE id = ${id}
+        RETURNING id
+      `;
+      return rows.length > 0;
     },
   };
 }

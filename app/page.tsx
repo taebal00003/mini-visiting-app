@@ -1,6 +1,7 @@
 import { getGuestbook } from "@/lib/app-guestbook";
 import { DEVELOPER } from "@/lib/developer";
 import { formatWrittenAt } from "@/lib/format";
+import { EntryList } from "./entry-list";
 import { WriteForm } from "./write-form";
 
 // Every visit shows the latest Entries.
@@ -20,26 +21,16 @@ export default async function Home() {
 
       <WriteForm />
 
-      <section className="mt-8" aria-label="방명록 글 목록">
-        {entries.length === 0 ? (
-          <p className="py-10 text-center text-muted">아직 작성된 글이 없습니다.</p>
-        ) : (
-          <ul className="space-y-3">
-            {entries.map((entry) => (
-              <li key={entry.id} className="rounded-xl border border-border bg-surface p-4">
-                <div className="flex flex-wrap items-baseline justify-between gap-x-3">
-                  <span className="font-semibold break-all">{entry.authorName}</span>
-                  <time dateTime={entry.writtenAt.toISOString()} className="text-sm text-muted">
-                    {formatWrittenAt(entry.writtenAt)}
-                    {entry.edited && " (수정됨)"}
-                  </time>
-                </div>
-                <p className="mt-2 whitespace-pre-wrap break-words">{entry.message}</p>
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
+      <EntryList
+        entries={entries.map((entry) => ({
+          id: entry.id,
+          authorName: entry.authorName,
+          message: entry.message,
+          writtenAt: entry.writtenAt.toISOString(),
+          writtenAtText: formatWrittenAt(entry.writtenAt),
+          edited: entry.edited,
+        }))}
+      />
     </main>
   );
 }

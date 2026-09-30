@@ -14,4 +14,7 @@ export type NewEntry = Pick<StoredEntry, "authorName" | "message" | "passwordHas
 export interface EntryStore {
   all(): Promise<StoredEntry[]>;
   insert(entry: NewEntry): Promise<void>;
+  find(id: string): Promise<StoredEntry | null>;
+  /** Replaces the Message and records when; false if no such Entry. */
+  updateMessage(id: string, message: string): Promise<boolean>;
 }

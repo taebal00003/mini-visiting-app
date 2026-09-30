@@ -106,6 +106,80 @@ describe("Entry password protection", () => {
   });
 });
 
+/** Writes an Entry and returns its id. */
+async function write(authorName: string, message: string, password: string) {
+  const result = await guestbook.writeEntry({ authorName, message, password });
+  expect(result).toEqual({ ok: true });
+  const entry = (await guestbook.listEntries()).find((e) => e.message === message);
+  return entry!.id;
+}
+
+const messageOf = async (id: string) => (await guestbook.listEntries()).find((e) => e.id === id);
+
+describe("editMessage", () => {
+  it("changes the Message and marks the Entry Edited when the Entry password matches", async () => {
+    const id = await write("홍길동", "처음 메시지", "secret");
+
+    const result = await guestbook.editMessage({ id, message: "고친 메시지", password: "secret" });
+
+    expect(result).toEqual({ ok: true });
+    expect(await messageOf(id)).toMatchObject({ message: "고친 메시지", edited: true, authorName: "홍길동" });
+  });
+
+  it("refuses a wrong Entry password and leaves the Entry unchanged", async () => {
+    const id = await write("홍길동", "처음 메시지", "secret");
+
+    const result = await guestbook.editMessage({ id, message: "몰래 고침", password: "not-secret" });
+
+    expect(result).toEqual({ ok: false, reason: "wrong-password" });
+    expect(await messageOf(id)).toMatchObject({ message: "처음 메시지", edited: false });
+  });
+
+  it("refuses another Entry's password", async () => {
+    const mine = await write("나", "내 글", "mine-pass");
+    await write("너", "네 글", "your-pass");
+
+    const result = await guestbook.editMessage({ id: mine, message: "고침", password: "your-pass" });
+
+    expect(result).toEqual({ ok: false, reason: "wrong-password" });
+    expect(await messageOf(mine)).toMatchObject({ message: "내 글", edited: false });
+  });
+
+  it("keeps the Entry's place in the list", async () => {
+    const older = await write("가", "오래된 글", "1234");
+    await write("나", "새 글", "1234");
+
+    await guestbook.editMessage({ id: older, message: "오래된 글 (고침)", password: "1234" });
+
+    const messages = (await guestbook.listEntries()).map((e) => e.message);
+    expect(messages).toEqual(["새 글", "오래된 글 (고침)"]);
+  });
+
+  it("reports an Entry that no longer exists", async () => {
+    const result = await guestbook.editMessage({ id: "no-such-entry", message: "고침", password: "1234" });
+    expect(result).toEqual({ ok: false, reason: "not-found" });
+  });
+
+  it.each([
+    ["an empty Message", ""],
+    ["a blank Message", "   "],
+    ["a 501-character Message", "가".repeat(501)],
+  ])("rejects %s even with the right Entry password", async (_, message) => {
+    const id = await write("홍길동", "처음 메시지", "secret");
+
+    const result = await guestbook.editMessage({ id, message, password: "secret" });
+
+    expect(result).toMatchObject({ ok: false, reason: "invalid", fieldErrors: { message: expect.any(String) } });
+    expect(await messageOf(id)).toMatchObject({ message: "처음 메시지", edited: false });
+  });
+
+  it("trims the new Message", async () => {
+    const id = await write("홍길동", "처음 메시지", "secret");
+    await guestbook.editMessage({ id, message: "  고친 메시지 \n", password: "secret" });
+    expect((await messageOf(id))?.message).toBe("고친 메시지");
+  });
+});
+
 describe("listEntries", () => {
   it("lists Entries newest first", async () => {
     for (const authorName of ["첫째", "둘째", "셋째"]) {
