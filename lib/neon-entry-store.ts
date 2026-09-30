@@ -65,5 +65,11 @@ export function createNeonEntryStore(databaseUrl: string): EntryStore {
       `;
       return rows.length > 0;
     },
+
+    async remove(id) {
+      if (!isUuid(id)) return false;
+      const rows = await sql`DELETE FROM entries WHERE id = ${id} RETURNING id`;
+      return rows.length > 0;
+    },
   };
 }

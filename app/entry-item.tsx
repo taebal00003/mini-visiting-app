@@ -2,7 +2,7 @@
 
 import { useActionState, useState } from "react";
 import { LIMITS } from "@/lib/entry-rules";
-import { editMessageAction, type ChangeFormState } from "./actions";
+import { deleteEntryAction, editMessageAction, type ChangeFormState } from "./actions";
 import { FieldError, inputClass, primaryButtonClass, secondaryButtonClass } from "./ui";
 
 export type EntryItemData = {
@@ -14,7 +14,7 @@ export type EntryItemData = {
   edited: boolean;
 };
 
-type Mode = "view" | "edit";
+type Mode = "view" | "edit" | "delete";
 type PanelProps = { entry: EntryItemData; onClose: () => void; onGone: (notice: string) => void };
 
 const idle: ChangeFormState = { status: "idle" };
@@ -38,11 +38,18 @@ export function EntryItem({ entry, onGone }: { entry: EntryItemData; onGone: (no
       ) : (
         <>
           <p className="mt-2 whitespace-pre-wrap break-words">{entry.message}</p>
-          <div className="mt-3 flex gap-2">
-            <button type="button" onClick={() => setMode("edit")} className={secondaryButtonClass}>
-              수정
-            </button>
-          </div>
+          {mode === "delete" ? (
+            <DeletePanel entry={entry} onClose={close} onGone={onGone} />
+          ) : (
+            <div className="mt-3 flex gap-2">
+              <button type="button" onClick={() => setMode("edit")} className={secondaryButtonClass}>
+                수정
+              </button>
+              <button type="button" onClick={() => setMode("delete")} className={secondaryButtonClass}>
+                삭제
+              </button>
+            </div>
+          )}
         </>
       )}
     </li>
@@ -74,6 +81,22 @@ function EditPanel({ entry, onClose, onGone }: PanelProps) {
       </label>
       <PasswordField />
       <PanelFooter notice={state.notice} pending={pending} submitLabel="수정 저장" onCancel={onClose} />
+    </form>
+  );
+}
+
+function DeletePanel({ entry, onClose, onGone }: PanelProps) {
+  const [state, formAction, pending] = useActionState(async (prev: ChangeFormState, formData: FormData) => {
+    const next = await deleteEntryAction(entry.id, prev, formData);
+    if (next.status === "gone" && next.notice) onGone(next.notice);
+    return next;
+  }, idle);
+
+  return (
+    <form action={formAction} className="mt-3 space-y-2" aria-label={`${entry.authorName}님의 글 삭제`}>
+      <p className="text-sm">이 글을 삭제하려면 작성할 때 정한 비밀번호를 입력하세요.</p>
+      <PasswordField />
+      <PanelFooter notice={state.notice} pending={pending} submitLabel="삭제하기" onCancel={onClose} />
     </form>
   );
 }

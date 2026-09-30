@@ -90,3 +90,21 @@ export async function editMessageAction(
   revalidatePath("/");
   return { status: "success" };
 }
+
+export async function deleteEntryAction(
+  id: string,
+  _prev: ChangeFormState,
+  formData: FormData,
+): Promise<ChangeFormState> {
+  let result: ChangeResult;
+  try {
+    result = await getGuestbook().deleteEntry({ id, password: text(formData, "password") });
+  } catch (error) {
+    console.error("deleteEntry failed", error);
+    return { status: "error", notice: UNEXPECTED };
+  }
+  if (!result.ok) return refusal(result);
+
+  revalidatePath("/");
+  return { status: "success" };
+}

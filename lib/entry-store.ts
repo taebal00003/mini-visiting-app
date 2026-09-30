@@ -17,4 +17,6 @@ export interface EntryStore {
   find(id: string): Promise<StoredEntry | null>;
   /** Replaces the Message and records when; false if no such Entry. */
   updateMessage(id: string, message: string): Promise<boolean>;
+  /** Deletes the Entry for good; false if no such Entry. */
+  remove(id: string): Promise<boolean>;
 }

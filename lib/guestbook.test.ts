@@ -180,6 +180,62 @@ describe("editMessage", () => {
   });
 });
 
+describe("deleteEntry", () => {
+  it("removes the Entry when the Entry password matches, leaving the others", async () => {
+    const mine = await write("나", "지울 글", "mine-pass");
+    const yours = await write("너", "남을 글", "your-pass");
+
+    const result = await guestbook.deleteEntry({ id: mine, password: "mine-pass" });
+
+    expect(result).toEqual({ ok: true });
+    const ids = (await guestbook.listEntries()).map((e) => e.id);
+    expect(ids).toEqual([yours]);
+  });
+
+  it("refuses a wrong Entry password and keeps the Entry", async () => {
+    const id = await write("나", "지키는 글", "mine-pass");
+
+    const result = await guestbook.deleteEntry({ id, password: "guess" });
+
+    expect(result).toEqual({ ok: false, reason: "wrong-password" });
+    expect(await messageOf(id)).toMatchObject({ message: "지키는 글" });
+  });
+
+  it("refuses another Entry's password", async () => {
+    const mine = await write("나", "내 글", "mine-pass");
+    await write("너", "네 글", "your-pass");
+
+    const result = await guestbook.deleteEntry({ id: mine, password: "your-pass" });
+
+    expect(result).toEqual({ ok: false, reason: "wrong-password" });
+    expect(await messageOf(mine)).toBeDefined();
+  });
+
+  it("reports an Entry that does not exist", async () => {
+    expect(await guestbook.deleteEntry({ id: "no-such-entry", password: "1234" })).toEqual({
+      ok: false,
+      reason: "not-found",
+    });
+  });
+
+  it("reports an Entry that was already deleted", async () => {
+    const id = await write("나", "두 번 지울 글", "mine-pass");
+    await guestbook.deleteEntry({ id, password: "mine-pass" });
+
+    expect(await guestbook.deleteEntry({ id, password: "mine-pass" })).toEqual({ ok: false, reason: "not-found" });
+  });
+
+  it("cannot edit an Entry once it is deleted", async () => {
+    const id = await write("나", "지운 뒤 고칠 글", "mine-pass");
+    await guestbook.deleteEntry({ id, password: "mine-pass" });
+
+    expect(await guestbook.editMessage({ id, message: "고침", password: "mine-pass" })).toEqual({
+      ok: false,
+      reason: "not-found",
+    });
+  });
+});
+
 describe("listEntries", () => {
   it("lists Entries newest first", async () => {
     for (const authorName of ["첫째", "둘째", "셋째"]) {

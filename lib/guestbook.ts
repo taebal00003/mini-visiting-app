@@ -27,6 +27,11 @@ export type EditMessageInput = {
   password: string;
 };
 
+export type DeleteEntryInput = {
+  id: string;
+  password: string;
+};
+
 export type ChangeResult =
   | { ok: true }
   | { ok: false; reason: "invalid"; fieldErrors: FieldErrors }
@@ -38,6 +43,8 @@ export type Guestbook = {
   writeEntry(input: WriteEntryInput): Promise<WriteResult>;
   /** Changes only the Message, and only for the holder of that Entry's password. */
   editMessage(input: EditMessageInput): Promise<ChangeResult>;
+  /** Deletes the Entry for good, only for the holder of that Entry's password. */
+  deleteEntry(input: DeleteEntryInput): Promise<ChangeResult>;
 };
 
 const NOT_FOUND = { ok: false, reason: "not-found" } as const;
@@ -87,6 +94,14 @@ export function createGuestbook(store: EntryStore): Guestbook {
 
       const updated = await store.updateMessage(input.id, checked.value.message);
       return updated ? { ok: true } : NOT_FOUND;
+    },
+
+    async deleteEntry(input) {
+      const denied = await authorise(input.id, input.password);
+      if (denied) return denied;
+
+      const removed = await store.remove(input.id);
+      return removed ? { ok: true } : NOT_FOUND;
     },
   };
 }
